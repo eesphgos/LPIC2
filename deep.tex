@@ -1,0 +1,791 @@
+\documentclass{article}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+
+\geometry{a4paper, margin=1in}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{CW GIT - Network Administration}
+\lhead{\today}
+\cfoot{\thepage}
+
+\title{Comprehensive Network Administration Guide}
+\author{Ehsan Esmaeili}
+\date{November 18, 2024}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section{IP Address Assignment}
+
+\subsection{Types of Address Assignment}
+\begin{itemize}
+    \item \textbf{Manual} $\rightarrow$ Static assignment
+    \item \textbf{Dynamic} $\rightarrow$ DHCP server
+\end{itemize}
+
+\subsection{Network Configuration Commands}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Display all network interfaces
+ifconfig -a
+# Show routing table
+route -n
+ip route show
+
+# Network configuration files
+# Ubuntu/Debian:
+/etc/network/interfaces
+# CentOS/RHEL:
+/etc/sysconfig/network-scripts/
+
+# Restart networking service
+systemctl restart networking
+\end{lstlisting}
+
+\subsection{Secure Shell (SSH)}
+\begin{itemize}
+    \item Remote management protocol (TCP/22)
+    \item Encrypted communication
+\end{itemize}
+
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Install SSH server
+apt-get install openssh-server  # Debian/Ubuntu
+yum install openssh-server     # CentOS/RHEL
+
+# Check listening ports
+netstat -ntulp
+n -> numeric    t -> TCP
+u -> UDP        l -> listening
+p -> PID
+
+# DNS configuration
+cat /etc/resolv.conf
+
+# Generate UUID for network interfaces
+uuidgen
+\end{lstlisting}
+
+\section{DHCP Server Configuration}
+
+\subsection{ISC DHCP Server Setup}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Configure DHCP server interface
+vi /etc/default/isc-dhcp-server
+INTERFACES="interface_name"
+
+# DHCP configuration file
+vi /etc/dhcp/dhcpd.conf
+# Set IP range, DNS, reservations
+
+# Manage DHCP service
+systemctl restart isc-dhcp-server
+systemctl status isc-dhcp-server
+
+# Check DHCP port
+netstat -ntulp | grep :67
+
+# Remove packages
+apt-get remove package_name
+apt-get purge package_name
+
+# DHCP logs
+cat /var/log/syslog | grep -i dhcp
+cat /var/lib/dhcp/dhcpd.leases
+\end{lstlisting}
+
+\section{Name Resolution}
+
+\subsection{Types of Name Servers}
+\begin{itemize}
+    \item \textbf{DNS Server (BIND)}: FQDN/DNS name $\rightarrow$ IP
+    \item \textbf{WINS Server}: NetBIOS $\rightarrow$ IP
+\end{itemize}
+
+\subsection{Local Name Resolution}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Local hosts file
+vi /etc/hosts
+
+# Name service switch configuration
+vi /etc/nsswitch.conf
+\end{lstlisting}
+
+\section{BIND DNS Server}
+
+\subsection{DNS Concepts}
+\begin{itemize}
+    \item \textbf{FQDN Structure}: www.example.com.
+    \item \textbf{Local DNS Server}: Forwarding/Recursive
+    \item \textbf{DDNS}: Dynamic DNS
+    \item \textbf{Master/Slave DNS}: Zone transfer
+\end{itemize}
+
+\subsection{DNS Query Tools}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+nslookup example.com
+host example.com
+dig example.com
+dig @DNS_SERVER_IP example.com
+\end{lstlisting}
+
+\subsection{Resource Records}
+\begin{itemize}
+    \item \textbf{SOA}: Start of Authority (Zone transfer)
+    \item \textbf{NS}: Name Server (Authoritative)
+    \item \textbf{A}: IPv4 address record
+    \item \textbf{AAAA}: IPv6 address record
+    \item \textbf{PTR}: Reverse lookup
+    \item \textbf{MX}: Mail exchange
+    \item \textbf{CNAME}: Alias/Canonical name
+    \item \textbf{TXT/SPF}: Text records
+\end{itemize}
+
+\subsection{BIND Installation and Configuration}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Install BIND
+apt-get install bind9 bind9utils      # Debian/Ubuntu
+yum install bind bind-utils          # CentOS/RHEL
+
+# Check installed packages
+rpm -qa | grep bind                  # CentOS/RHEL
+
+# Main configuration files
+vi /etc/bind/named.conf.options
+vi /etc/bind/named.conf.local
+
+# Enable recursion
+recursion yes;
+
+# Reload configuration
+rndc reload
+systemctl restart bind9
+systemctl status bind9
+\end{lstlisting}
+
+\subsection{Master DNS Server Setup}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Zone configuration
+zone "example.com" {
+    type master;
+    file "/etc/bind/db.example.com";
+};
+
+# Create zone database file
+vi /etc/bind/db.example.com
+
+$TTL 3600
+@ IN SOA example.com. root.example.com. (
+    10      ; Serial
+    1200    ; Refresh
+    300     ; Retry
+    86400   ; Expire
+    3600 )  ; Minimum TTL
+
+@       IN NS      ns1.example.com.
+ns1     IN A       192.168.56.10
+www     IN A       192.168.56.60
+ftp     IN A       192.168.56.70
+\end{lstlisting}
+
+\subsection{Reverse DNS Zone}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Reverse zone configuration
+zone "56.168.192.in-addr.arpa" {
+    type master;
+    file "/etc/bind/db.56.168.192";
+};
+
+# PTR records
+10 IN PTR ns1.example.com.
+60 IN PTR www.example.com.
+70 IN PTR ftp.example.com.
+
+# Test reverse lookup
+dig @localhost -x 192.168.56.60
+\end{lstlisting}
+
+\subsection{Time Zone Configuration}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Debian/Ubuntu
+vi /etc/timezone
+Asia/Tehran
+
+cp /usr/share/zoneinfo/Iran /etc/localtime
+
+# CentOS/RHEL
+timedatectl list-timezones
+timedatectl set-timezone Asia/Tehran
+timedatectl
+\end{lstlisting}
+
+\subsection{Slave DNS Server Configuration (CentOS)}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+vi /etc/named.conf
+
+# Listen on all interfaces
+listen-on port 53 { any; };
+
+# Allow queries from any
+allow-query { any; };
+
+# Slave zone configuration
+zone "example.com" {
+    type slave;
+    masters { 192.168.56.10; };
+    file "slaves/db.example.com";
+};
+
+# Enable named service on boot
+systemctl enable named
+systemctl disable named
+\end{lstlisting}
+
+\subsection{DNSSEC with TSIG}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Generate TSIG key
+cd /etc/bind
+dnssec-keygen -a HMAC-MD5 -b 128 -n HOST transferkey
+
+# Create key file
+vi /etc/bind/named.conf.tsig
+key "transferkey" {
+    algorithm HMAC-MD5;
+    secret "KEY_STRING";
+};
+
+# Include in main config
+include "/etc/bind/named.conf.tsig";
+
+# Configure zone transfer
+allow-transfer { key "transferkey"; };
+\end{lstlisting}
+
+\section{Apache Web Server}
+
+\subsection{Virtual Hosting Methods}
+\begin{enumerate}
+    \item Different IP addresses
+    \item Same IP, different ports
+    \item Same IP and port, different hostnames (Name-based)
+\end{enumerate}
+
+\subsection{Apache Installation}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Debian/Ubuntu
+apt-get install apache2
+
+# CentOS/RHEL
+yum install httpd
+
+# Configuration directories
+/etc/apache2/              # Debian/Ubuntu
+/etc/httpd/               # CentOS/RHEL
+\end{lstlisting}
+
+\subsection{Virtual Host Configuration}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Debian/Ubuntu structure
+/etc/apache2/sites-available/
+/etc/apache2/sites-enabled/
+
+# Enable site
+a2ensite example.conf
+systemctl reload apache2
+
+# Virtual host example
+<VirtualHost 192.168.56.20:80>
+    ServerName www.example.com
+    DocumentRoot /var/www/example
+</VirtualHost>
+\end{lstlisting}
+
+\subsection{Authentication and Redirection}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Create password file
+htpasswd -c /etc/apache2/.htpasswd username
+
+# Directory protection
+<Directory "/var/www/secure">
+    AuthType Basic
+    AuthName "Restricted Area"
+    AuthUserFile /etc/apache2/.htpasswd
+    Require valid-user
+</Directory>
+
+# URL redirection
+Redirect /old /new
+\end{lstlisting}
+
+\subsection{SSL/TLS Configuration}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Generate self-signed certificate
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout /etc/httpd/private.key \
+    -out /etc/httpd/public.crt
+
+# Apache SSL configuration
+SSLCertificateFile /etc/httpd/public.crt
+SSLCertificateKeyFile /etc/httpd/private.key
+\end{lstlisting}
+
+\section{SSH Configuration}
+
+\subsection{Passwordless SSH Authentication}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Generate SSH key pair
+ssh-keygen -t rsa
+
+# Copy public key to remote server
+ssh-copy-id user@remote_host
+
+# Test connection
+ssh user@remote_host
+\end{lstlisting}
+
+\section{Routing}
+
+\subsection{Route Types}
+\begin{itemize}
+    \item \textbf{Network Route}: 192.168.56.0/24
+    \item \textbf{Host Route}: 192.168.56.20/32
+    \item \textbf{Default Route}: 0.0.0.0/0
+\end{itemize}
+
+\subsection{Enable IP Forwarding}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Temporary enable
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+# Permanent enable
+vi /etc/sysctl.conf
+net.ipv4.ip_forward = 1
+
+# Apply changes
+sysctl -p
+\end{lstlisting}
+
+\section{Firewall Configuration}
+
+\subsection{UFW (Ubuntu)}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+ufw status
+ufw allow 22/tcp
+ufw deny 23/tcp
+ufw delete RULE_NUMBER
+ufw reset
+\end{lstlisting}
+
+\subsection{FirewallD (CentOS)}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+systemctl start firewalld
+firewall-cmd --list-all
+firewall-cmd --add-service=ssh --permanent
+firewall-cmd --add-port=80/tcp --permanent
+firewall-cmd --reload
+\end{lstlisting}
+
+\section{iptables}
+
+\subsection{iptables Tables and Chains}
+\begin{itemize}
+    \item \textbf{Tables}: filter, nat, mangle, raw, security
+    \item \textbf{Built-in Chains}: INPUT, OUTPUT, FORWARD, PREROUTING, POSTROUTING
+\end{itemize}
+
+\subsection{Common iptables Commands}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# List rules
+iptables -L -n -v
+iptables -t nat -L
+
+# Flush rules
+iptables -F
+iptables -t nat -F
+
+# Save rules
+iptables-save > /etc/iptables/rules.v4
+
+# Restore rules
+iptables-restore < /etc/iptables/rules.v4
+\end{lstlisting}
+
+\subsection{Example Rules}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Block ICMP from specific IP
+iptables -A INPUT -p icmp -s 192.168.56.20 -j REJECT
+
+# Allow SSH from specific network
+iptables -A INPUT -p tcp --dport 22 -s 192.168.56.0/24 -j ACCEPT
+
+# Default policies
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT ACCEPT
+\end{lstlisting}
+
+\subsection{NAT Configuration}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Masquerading (Internet sharing)
+iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+iptables -A FORWARD -i eth1 -j ACCEPT
+
+# Port forwarding
+iptables -t nat -A PREROUTING -p tcp --dport 2222 \
+    -j DNAT --to-destination 192.168.56.30:22
+\end{lstlisting}
+
+\section{DHCP Relay Agent}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# DHCP server configuration
+subnet 172.20.1.0 netmask 255.255.255.0 {
+    range 172.20.1.111 172.20.1.120;
+    option routers 172.20.1.2;
+}
+
+# DHCP relay configuration
+apt-get install isc-dhcp-relay  # Ubuntu
+yum install dhcp                # CentOS
+
+# Configure relay
+vi /etc/default/isc-dhcp-relay
+SERVERS="192.168.56.10"
+INTERFACES="eth0 eth1"
+\end{lstlisting}
+
+\section{LVM (Logical Volume Manager)}
+
+\subsection{LVM Basic Operations}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Create physical volumes
+pvcreate /dev/sdb1 /dev/sdc1
+
+# Create volume group
+vgcreate vg_data /dev/sdb1 /dev/sdc1
+
+# Create logical volume
+lvcreate -n lv_www -L 10G vg_data
+
+# Create filesystem
+mkfs.ext4 /dev/vg_data/lv_www
+
+# Mount filesystem
+mount /dev/vg_data/lv_www /var/www
+
+# Extend logical volume
+lvextend -L +5G /dev/vg_data/lv_www
+resize2fs /dev/vg_data/lv_www
+\end{lstlisting}
+
+\section{RAID Configuration}
+
+\subsection{RAID Levels}
+\begin{itemize}
+    \item \textbf{RAID 0}: Striping (performance)
+    \item \textbf{RAID 1}: Mirroring (redundancy)
+    \item \textbf{RAID 5}: Distributed parity
+    \item \textbf{RAID 10}: Mirroring + striping
+\end{itemize}
+
+\subsection{Software RAID with mdadm}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Create RAID 1 array
+mdadm --create --verbose /dev/md0 \
+    --level=1 --raid-devices=2 /dev/sdb1 /dev/sdc1
+
+# Create filesystem
+mkfs.ext4 /dev/md0
+
+# Monitor RAID status
+cat /proc/mdstat
+mdadm --detail /dev/md0
+
+# Save configuration
+mdadm --detail --scan > /etc/mdadm.conf
+\end{lstlisting}
+
+\section{Samba File Sharing}
+
+\subsection{Samba Server Configuration}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Install Samba
+apt-get install samba smbclient  # Ubuntu
+yum install samba samba-client   # CentOS
+
+# Configure Samba
+vi /etc/samba/smb.conf
+
+[shared]
+    path = /srv/samba/shared
+    valid users = @smbgroup
+    read only = no
+    create mask = 0775
+
+# Add Samba user
+smbpasswd -a username
+
+# Restart service
+systemctl restart smbd nmbd
+\end{lstlisting}
+
+\section{Kernel Modules}
+
+\subsection{Module Management}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# List loaded modules
+lsmod
+
+# Module information
+modinfo module_name
+
+# Load module
+modprobe module_name
+insmod /path/to/module.ko
+
+# Remove module
+rmmod module_name
+modprobe -r module_name
+
+# Update module dependencies
+depmod -a
+\end{lstlisting}
+
+\section{Nginx Web Server}
+
+\subsection{Nginx Installation and Configuration}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Install Nginx
+apt-get install nginx  # Ubuntu
+yum install nginx     # CentOS
+
+# Configuration structure
+/etc/nginx/
+
+
+# Test configuration
+nginx -t
+
+# Reload configuration
+nginx -s reload
+systemctl reload nginx
+\end{lstlisting}
+
+\subsection{Nginx as Reverse Proxy}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+upstream backend {
+    server backend1.example.com:8080;
+    server backend2.example.com:8080;
+    server backend3.example.com:8080;
+}
+
+server {
+    listen 80;
+    location / {
+        proxy_pass http://backend;
+    }
+}
+\end{lstlisting}
+
+\section{IPv6 Configuration}
+
+\subsection{IPv6 Address Types}
+\begin{itemize}
+    \item \textbf{Global Unicast}: 2001:db8::/32
+    \item \textbf{Link-local}: fe80::/64
+    \item \textbf{Unique Local}: fd00::/8
+    \item \textbf{Multicast}: ff00::/8
+\end{itemize}
+
+\subsection{IPv6 Network Configuration}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Static IPv6 configuration
+iface eth0 inet6 static
+    address 2001:db8::10
+    netmask 64
+
+# IPv6 ping
+ping6 2001:db8::1
+
+# IPv6 DNS configuration
+host example.com AAAA
+dig example.com AAAA
+\end{lstlisting}
+
+\section{FTP Server (vsftpd)}
+
+\subsection{vsftpd Configuration}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Install vsftpd
+apt-get install vsftpd  # Ubuntu
+yum install vsftpd      # CentOS
+
+# Main configuration
+vi /etc/vsftpd.conf
+
+# Enable write access
+write_enable=YES
+
+# User access control
+userlist_enable=YES
+userlist_file=/etc/vsftpd.user_list
+userlist_deny=NO
+
+# Restart service
+systemctl restart vsftpd
+\end{lstlisting}
+
+\section{Fail2ban Intrusion Prevention}
+
+\subsection{Fail2ban Configuration}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Install Fail2ban
+apt-get install fail2ban
+
+# Configuration files
+/etc/fail2ban/jail.conf
+/etc/fail2ban/jail.local
+
+# Example SSH protection
+[sshd]
+enabled = true
+port = ssh
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+bantime = 600
+
+# Manage service
+systemctl restart fail2ban
+fail2ban-client status
+\end{lstlisting}
+
+\section{OpenVPN}
+
+\subsection{OpenVPN Configuration}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Install OpenVPN
+apt-get install openvpn  # Ubuntu
+yum install openvpn      # CentOS
+
+# Generate static key
+openvpn --genkey --secret static.key
+
+# Server configuration
+dev tun
+ifconfig 10.8.0.1 10.8.0.2
+secret static.key
+
+# Client configuration
+remote server.example.com
+dev tun
+ifconfig 10.8.0.2 10.8.0.1
+secret static.key
+\end{lstlisting}
+
+\section{NFS (Network File System)}
+
+\subsection{NFS Server Configuration}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Install NFS server
+apt-get install nfs-kernel-server  # Ubuntu
+yum install nfs-utils              # CentOS
+
+# Export directory
+vi /etc/exports
+/shared  *(rw,sync,no_subtree_check)
+
+# Apply exports
+exportfs -ra
+
+# Start services
+systemctl restart nfs-server
+\end{lstlisting}
+
+\section{Squid Proxy Server}
+
+\subsection{Squid Configuration}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Install Squid
+apt-get install squid
+
+# Basic configuration
+vi /etc/squid/squid.conf
+
+# Allow all clients
+http_access allow all
+
+# Cache configuration
+cache_dir ufs /var/spool/squid 100 16 256
+
+# Access control list
+acl localnet src 192.168.0.0/16
+http_access allow localnet
+
+# Restart service
+systemctl restart squid
+\end{lstlisting}
+
+\section{Mail Server (Postfix, Dovecot)}
+
+\subsection{Postfix Configuration}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Install Postfix
+apt-get install postfix mailutils
+
+# Main configuration
+vi /etc/postfix/main.cf
+
+# Test mail
+echo "Test message" | mail -s "Test" user@example.com
+
+# Mail aliases
+vi /etc/aliases
+admin: user1, user2
+newaliases
+\end{lstlisting}
+
+\subsection{Dovecot IMAP/POP3}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Install Dovecot
+apt-get install dovecot-imapd dovecot-pop3d
+
+# Configuration
+vi /etc/dovecot/conf.d/10-mail.conf
+mail_location = maildir:~/Maildir
+
+# SSL configuration
+vi /etc/dovecot/conf.d/10-ssl.conf
+ssl = required
+ssl_cert = </etc/ssl/certs/dovecot.pem
+ssl_key = </etc/ssl/private/dovecot.pem
+
+# Restart service
+systemctl restart dovecot
+\end{lstlisting}
+
+\section{Monitoring Tools}
+
+\subsection{Network Monitoring}
+\begin{lstlisting}[language=bash, backgroundcolor=\color{gray!10}, basicstyle=\ttfamily\small]
+# Port scanning
+nmap localhost
+nc -vz hostname port
+
+# Bandwidth monitoring
+iftop
+nload
+
+# Network testing
+iperf -s  # Server
+iperf -c server_ip  # Client
+\end{lstlisting}
+
+\end{document}

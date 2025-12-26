@@ -1,0 +1,2407 @@
+\documentclass{article}
+
+
+\title{CW GIT}
+
+\date{2024 nov 18}
+
+\author{Ehsan Esmaeili}
+
+\newpage
+\begin{document}
+
+\section*{section one: ip assignment}
+
+\subsection*{type of addr assignment}
+
+manual -> static
+
+dynamic -> DHCP server
+
+ifconfig -a show you all interface
+
+route -n show table of route
+
+ip route show also show table
+
+/etc/network/interfaces to see seting of interface in ubonto
+
+/etc/syscongih/network-scripts/ for centos
+
+systemctl restart networking
+
+secure shell (ssh) => remote managment tcp/22 encrypt
+
+install openssh-server
+
+apt-ger install openssh-server
+
+netstat -ntulp
+
+n -> numeric
+
+t-> tcp
+
+u -> udp
+
+l -> listening
+
+p -> PID
+
+cat /etc/resolv.conf  shot you dns server
+
+uuidgen -> this command make a uuid to set it in to ifcfg-enp0s in centos
+
+\section*{DHCP}
+
+vi /etc/default/isc-dhcp-server set name of interface for lissten to dhcp
+
+INTERFACES="name of interface"
+
+/etc/dhcp/dhcpd.conf you can set range for ip addressing or dns or set reservation an ip
+
+systemctl restart isc-dhcp-server
+
+systemctl status isc-dhcp-server
+
+netstat -ntulp | grep :67
+
+apt-get remove name
+apt-get purge name
+
+cat /var/log/syslog | grep -i dhcpdiscover -offer- request - ach 
+
+cat /var/lib/dhcp/dhcpd.leases
+
+systemctl restart sshd
+
+\section*{Name resolution}
+
+Name ==> ip
+
+www.google.com ---> 82.153.6.8
+
+Name sever:
+
+1.DNS server (BIND) FQDN or DNS name --- > ip
+
+2.WINS server  NetBIOS ---> ip
+
+vi /etc/hosts add an ip and name infront of it  to set name resolution
+
+vi /etc/nsswitch change priority of dns server or hosts
+
+\section*{Bind}
+
+www.min.ir.""
+
+local DNS sever (forwarding DNS server) ---> Other DNS server (Forwarder DNS server)
+ this work named Recursion
+
+DDNS
+
+DNS master and slave with BIND
+
+Master DNS server ==> Name Registration + Name resolution
+
+Slave DNS server ==> Name resolution
+
+
+
+www -> host name --> can be 63 char first 15 char for NetBIOS
+
+.mi.ir -> DNS Suffix --> can be 255 char
+
+nslookup sitename to get ip
+
+host sitename to get ip
+
+dig sitename to get ip
+
+dig @ip to ask ip
+
+Resource Record:
+
+SOA (main): =====> Zone transfer 
+            Serial number:
+            Refresh interval: 1200 s
+            Retry interval: 300 s
+            Expire: 1 Day to s
+            Cache TTL: 3600 s
+
+
+NS (main) ===> name server ====>autoritative 
+
+A ====> FQDN ---->IPv4
+
+AAAA  ====> FQDN ---->IPv6
+
+PTR ====> IP ===> FQDN
+
+SRV
+
+MX
+
+CName(Alias)
+
+TXT
+
+SPF
+
+dig @4.2.2.4 AAAA www.google.com
+
+apt-get install bind9 bind9utils
+
+rpm -qa | grep bind 
+
+vi /etc/bind/named.conf.options
+
+add "recursion yes ;" at ent of {}
+
+rndc reload ---> if succesful mean every config file ok
+
+systemctl status bind9
+
+systemctl restart bind9 or rndc reload
+
+\subsection*{set server as master}
+
+vi /etc/bind/named.conf.local
+
+to those file add 4 next lines
+
+zone "anisa.co.ir" {
+        type master;
+        file "/etc/bind/db.anisa.co.ir";% ==> database
+};
+
+to crate a database for dns server
+
+vi/etc/bind/db.anisa.co.ir % new db file
+
+to those file add 11 next lines
+
+\$TTL   3600
+@       IN      SOA     anisa.co.ir.        root.anisa.co.ir.  (
+                        10       ;serial%after; is command
+                        1200     ;refresh
+                        300      ;retry
+                        86400    ;expire
+                        3600 )    ;cash ttl   
+@       IN      NS      ubuntu.anisa.co.ir.
+ubuntu.anisa.co.ir.     IN      A       192.168.56.10
+www.anisa.co.it.        IN      A       192.168.56.60
+ftp.anisa.co.it.        IN      A       192.168.56.70
+
+systemctl restart bind9 %restart dns server after each change
+
+rndc reload %to see every thing is ok
+
+if rndc is none succesful use systemctl status
+
+or use
+journalctl -xe
+
+dig @localhost www.anisa.co.ir %ask as localhost to test
+
+dig @localhost ftp.anisa.co.ir %ask as localhost to test
+
+dig @localhost pop3.anisa.co.ir %ask as localhost to test this is most be faile
+
+if wriht 192.168.56.10(dns server) in localhos place then ask dns server
+
+\subsection*{set dns server by reverse ip addressing}
+
+192.168.56.0/24 ==> 56.168.192.in-addr.arpa
+
+then set PTR to convert id to fqdn
+
+vi /.. /named.conf.local
+
+add 
+
+zone "56.168.192.in-addr.arpa" {
+            type master ;
+            file "/etc/bind/db.56.168.192";
+            
+};
+
+cp db.anisa.co.ir ./db.56.168.192
+
+vi db.56.168.192
+
+delete 4 last line (with that have ip)
+
+them add 
+
+10      IN      PTR     ubuntu.anisa.co.ir.
+60      IN      PTR     www.anisa.co.ir
+70      IN      PTR     ftp.anisa.co.ir
+80      IN      PTR     pop3.anisa.co.ir
+
+systemctl restart bind9
+
+rndc reload
+
+dig @localhost -x 192.168.56.60 %-x revers
+
+%===> set time zone and timing
+vi /etx/timezone ==> Asia/Tehran
+
+cd /use/share/zoneinfo
+
+cp ./Iran /etc/localtime
+
+date
+
+%=====>in centos
+timedatectl list-timezones
+
+timedatectl set-timezone Asia/Tokyo
+
+timedatectl
+
+to set master and slave dns server the both timezone mostbe same
+
+\subsection*{make slave dns server (centos)}
+
+vi /etc/named.conf
+
+add%
+
+in line 13 centos listen in 127.0.0.1:53 that mean centos listen to itself
+them delete 127.0.0.1 and write any to listen to another
+
+in lin 21 allow-query most be to any instead of localhosr 
+them whrit in "any;"
+
+after default zoon than define at first add%
+
+zone "anisa.co.ir" {
+        type slave;
+        masters { 192.168.56.10; };
+        file "db.anisa.co.ir";
+};
+
+in ubuntu%
+
+vi /etc/bind/db.anisa.co.ir
+
+chande serial 2 unit%becaus be wanrt to make 2 change 
+
+add a ns record after first ns record
+
+@       IN      NS      centos.anisa.co.ir
+centos.anisa.co.ir.     In      A       192.168.56.20
+systemctl restart bind9%for ubuntu
+
+systemctl restart named% named is bind but in centos
+
+netstat -ntulp | grep :53 | grep named %to see changed setting
+
+
+cat /var/log/messages | grep -i transfer %you can see log transfer in centos
+
+dig @localhost pop3.anisa.co.ir
+
+dig @192.168.56.10 pop3.anisa.co.ir
+
+dig @192.168.56.20 pop3.anisa.co.ir
+
+systemctl enable named % auto start named sevice in next reboot
+systemctl disable named
+
+\subsection*{DNSsec}
+
+%in master 
+TSIG (Transfer SIGniture) = a secure chanel between master and slave
+
+cd /etc/bind
+
+dnssec-keygen -a HMAC-MD5 -b 128 -n HOST -r /dev/urandom transerkey
+
+                |           |      |        |
+
+cat Ktransferkey.+157+02007.private | grep Key > ./named.conf.tsif
+
+vi named.conf
+
+add at end
+
+include "/etc/bind/named.conf.tsig";
+
+vi named.conf.local
+
+in anisa zone
+
+add afrer file""
+
+allow-transfer {key "transferkey";};
+
+systemctl rstart bind9
+
+rndc reload
+
+we maby got an error from named.conf.tsig file
+
+change Key: 231313131.. to
+
+key "transferkey" {
+        algorithm HMAC-MD5;
+        secret "231313131..";
+};
+
+systemctl restart bind9
+
+rndc reload
+
+%in slave
+
+systemctl status sshd
+
+ss -ntulp | grep :22
+
+%in master
+
+scp ./named.conf.tsig root@192.168.56.20:/root/
+
+%in slave
+
+cat named.conf.tsig >> /etc/named.conf
+
+vi /etc/named.conf
+
+4dd move those line to above of options
+
+and beetween options and key add
+
+server 192.168.56.10{
+        keys { transferkey; };
+};
+
+
+systemctl restart named
+
+%in master 
+
+systemctl restart bind9
+
+rndc reload
+
+%in slave
+
+systemctl restart named
+
+\section*{Apache}
+
+socket base application
+
+Protocol:IP:Port
+
+http://www.google.com:80
+
+if we want to make two site
+
+bui.com
+mai.ir
+
+1) diffrent IP add ===> bui.com --> 192.168.56.10 , mai --> 192.168.56.20
+
+2) same IP address and diffrent port ===> bui.com >> 192.168.56.10:8080 , mai >> 192.168.56.10:8090
+
+3) same IP & Prot ====> diffrent host name (header) ==> 192.168.56.10:8080 --> bui.com , mai.ir
+
+package name in red hat = httpd and in debian = apache2
+
+and config file with same name in the /etc
+
+<virtualHost 192.168.56.20:20>
+        DocumentRoot /var/www/html
+</virtualHost 192.168.56.20:20>
+
+in /etc/apache2/ports.cofn ---> Listen to any thing
+
+you can also see html file in /var/www
+
+in www html folder is default and you can add another folder to more page
+
+in /etc/apache2/site-avalible you can add config file
+
+to show change in site you most linked mysite in site-enable to config file than in dite-avalible
+
+you also can make link by this command "a2endite "name of config file""
+
+systemctl reload apache2
+
+systemctl restart apache2
+
+to open site with name of sit (not ip)
+
+first in /apache2/site-enabled/ change mysite file and add a line in every server
+
+ServerName www.mai.ir
+
+them go to /bind/maned.conf.local
+
+add new one for bui and mui
+
+so go to make db of these zone
+and change it
+
+:%s/word/newwork/g
+
+above line to change same work to new word 
+in vi per each cope
+
+systemctl restart bind9
+
+rndc reload
+
+systemctl  restart apache2
+
+them go to centos (client)
+
+vi /etc/sysconfig/network-scripts/ifcfg-enp0s3
+
+and add DNS
+
+DNS1=192.168.56.10
+
+systemctl restart network
+
+authentication methods :
+
+1)username password ===> /etc/passwd, ldap server, kerveros, NIS, Active Directory
+
+2)smart card ===> EAP
+
+3)Certificate ===> CA
+
+AAA server : ====> RADIUS server
+
+Authenticate Authorized Accounting
+
+authenticate for apache2
+
+
+make a (name)secret file in /var/www/mai/
+
+echo "<h1> welcome to secret page</h1>" > ./secret/index.html
+
+htpasswd -c /etc/apache2/amirpass amir
+
+vi /etc/apache2/site-enabled/mysite
+
+in a virtualhost zone add these line
+
+<Directory "/var/www/maserati/secret" >
+        AuthType Basic
+        AuthName "PLZ enter username and password"
+        AuthUserFile /etc/apache2/amirpass
+        Require valid-user 
+</Directory>
+
+systemctl restart apache2
+
+make a (name)policy in /var/www/mai/
+
+echo "<h1>welcom to policy page </h1>" > ./policy/index.html
+
+vi /etc/apache2/sites-enabled/mysite.conf
+
+in a virtual host zone add
+
+Redirect /secret /policy
+
+
+systemctl restart apache2
+
+
+ssl setup in centos
+
+yum install httpd mod_ssl
+
+cd /etc/httpd
+
+cd conf
+
+vi httpd.conf
+
+line 42 listen in 80 port
+
+line 119 Ducumentroot "/var/www/html"
+
+cd /var/www/html
+
+echo "<h1>welcom to centos web server </h1>" > ./index.html
+
+systemctl restart httpd
+
+if error journalctl -xe
+
+vi /etc/httpd/conf.d/ssl.conf
+
+to set site in https
+
+ca /etc/httpd
+
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ./private.key -out ./public.crt
+
+vi /etc/httpd/conf.d/ssl.conf
+
+line 100 changto ==> SSLCertificateFile /etc/httpd/puvlic.crt
+
+line 107 chang to ==> SSLCertificateKeyFile /etc/httpd/private.key
+
+systemctl restart httpd
+
+netstat -ntulp | grep :443
+
+
+\section{Secur SHell (ssh)}
+
+remote managment:
+
+1) Telnet ===> 23 ---> Plaintext
+
+2) SSH ===> 22 ---> Encrypt >> user,pass   password-less(ssh key)
+
+3) RDP ===> 3389
+
+4) SNMP ===> 
+
+dpkg -l | grep openssh-server
+
+apt-get install openssh-server
+
+cd /etc/ssh
+
+vi sshd_config --> permitlogin >> yes
+
+systemctl restart sshd
+
+netstat -ntulp | grep :22
+
+%in centos (user)
+
+ssh root@192.168.56.10
+
+ssh root@192.168.56.10 -p 2254 (on port 2254)
+
+exit
+
+vi /etc/selinux/config
+
+in line 7 =disabled
+
+\subsection*{password less in ssh}
+
+in ~/.ssh
+
+ssh-keygen
+
+ssh-copy-id -i id_rsa.pub root@192.168.56.10
+
+ssh root@192.168.56.10
+
+
+\section*{routing}
+
+type of route
+
+1)network route 192.168.56.0/24
+
+2)host route 192.168.56.20/32
+
+3)default route 0.0.0.0/0.0.0.0
+
+priority ==> H - N - D
+
+priotity ==> static - dynamic
+
+static router -- dynamic routing protocol ----> dynamc router
+
+adverisement     RIP,EIGRP,OSPF,.. BGP,IS-IS
+
+Announcement
+
+to see os is router or not
+
+cat /proc/sys/net/ipv4/ip_forward if == 0 = disable
+
+echo 1 > /proc/sys/net/ipv4/ip_forwardd
+
+to permanent routing
+
+vi /etc/sysctl.conf
+
+ling 28 del #
+
+\section*{IPTable , firewall}
+
+
+\subsection*{firewall}
+ufw status
+
+ufw allow 22/tcp
+
+to see rules ufw status
+
+and ports in /etc/servises
+
+ufw status numbered
+
+ufw delete 4
+
+ufw reset
+
+but in centos
+
+systemctl start firewalld
+
+firewall-cmd --list-ports
+
+firewall-cmd --services
+
+firewall-cmd --remove-service=ssh
+
+firewall-cmd --permanent --remove-service=ssh
+
+firewall-cmd --reload
+
+firewall-cmd --permanent --add-port=22/tcm
+
+firewall-cmd --reload
+
+\subsection*{IPTable}
+
+iptavles:(IPchanges) and we have priority
+
+1)Filter===> Block, Accept Packet
+
+2)NAT =====> Internet sharing , Port mapping (Forwarding) , Readirect
+
+3)Mangle
+
+4)Raw
+
+5)Security
+
+
+every table have some Chain
+
+Chains:
+                        _
+1)INPUT                 |
+
+2)FORWARD               |
+
+3)OUTPUT                |==> Built-in
+
+4)PREROUTING            |
+
+5)POSTROUTINg           |
+                        _
+
+
+man iptables
+
+iptables -t filter -n -L
+
+iptables -t filter -F
+
+iptables -t filter -X
+
+iptables -t filter -nL
+
+inpables --table nat -nL
+
+Define Rules :
+
+-p protocol ---> tcp, udp, icmp, all
+
+-s source address
+
+-d destination address
+
+-i Inbound-Interface
+
+-o Outbound-Interface
+
+-j (jump)Target ---> Accept, Reject(error message) , Drop (no error msg), Redirect, SNAT, DNAT, Masquerade
+
+-A Append
+
+-I Insert
+
+-t choose table (default filter)
+
+-D delete
+
+apt-get install iptables-persistent for permanent in ruleing
+
+rule writing :
+
+iptables -t filter -A INPUT -p icmp -s 192.168.56.20 -j REJECT
+
+iptables -t filter -nL
+
+iptables -t filter -A INPUT -p tcp --destination-port 22 -j REJECT
+
+iptables -t filter -F
+
+iptables -t filter -A INPUT -p tcp --destination-port 22 -s 192.168.56.30 -j REJECT
+
+iptables -t filter -I INPUT 5(default 1) -p icmp -s 192.168.56.20 -j DROP
+
+iptables -t filter -nL --line-numbers
+
+iptables -t filter -D INPUT 3
+
+iptables -t filter -F
+
+iptables -t filter -A OUTPUT -p icmp -d 192.168.56.30 -j DROP
+
+ss -ntulp | grep :22
+
+change port num in /etc/ssh/sshd_config
+
+systemctl restart sshd
+
+iptables -t nat -A PREROUTING -i enp0s3 -p tcp --dport 22 -j REDIRECT --to-port 2370(or else)
+
+iptables -t filter -P INPUT DROP %change default
+
+iptables -t filter -A INPUT -p tcp --destination-port 22 -s 192.168.56.1 -j ACCEPT
+
+
+to save all of them
+
+iptables-save 
+
+iptables-save > /etc/iptables/rules.v4
+
+\subsection*{NAT}
+
+int nat os we most write two rule one in nat table and on in filter tables
+
+
+iptables --table nat --append POSTROUNTING --out-interface enp0s8 --jump MASQUERADE
+
+iptables --table filter --append FORWARD --in-interface enp0s3 --jump ACCEPT
+
+
+iptables -t nat -A POSTROUTING -o enp0s8 -j MASQUERADE
+
+iptables -t filter -A FORWARD -i nep0s3 -j ACCEPT
+
+
+\subsection*{Port Mapping}
+
+
+iptables -t nat -A PREROUTING -i enp0s8 -p tcp --destination-port 2222 -j DNAT --to-destination 192.168.56.30:2370
+
+iptables -t nat -A PREROUTING -i enp0s8 -p tcp --destination-port 3333 -j DNAT --to-destination 192.168.56.20:2480
+
+iptables --t filter -A FORWARD -i enp0s8 -p tcp --destination-port 2370 -j ACCEPT
+
+iptables --t filter -A FORWARD -i enp0s8 -p tcp --destination-port 2480 -j ACCEPT
+
+\section*{DHCP relay ageng/host (router)}
+
+at first in dhcp sesrver os in /etc/dhcp/dhcpd.conf
+
+add these line after subnet and host
+
+subnet 172.20.1.0 netmask 255.255.255.0 {
+        range 172.20.1.111 172.20.1.120;
+        option routers 172.20.1.2;
+}
+
+in router os
+
+apt/yum install dhcp
+
+route add -net 172.20.1.0/24 gw 192.168.56.20 dev enp0s3
+
+enable routing in /proc/....
+
+cp /lib/systemd/system/dhcrelay.service /etc/systemd/system/
+
+vi /etc/systemd/system/dhcrelay.service
+
+in line 9 add to end
+
+192.168.56.10
+
+systemctl --system daemon-reload
+
+systemctl restart dhcrelay
+
+cat /var/lib/dhcp/dhcpd.leases %to see log
+
+
+\section*{LVM (logical volume manager)}
+
+ls /dev/sd*
+
+lsblk
+
+fdisk /dev/sdb \% set the lvm tag - 8e
+
+fdisk /dev/sdc
+
+fdisk /dev/sdd
+
+pvs \% physical volum
+
+vgs \% volume group
+
+lvs \% logical volume
+
+pvdisplay
+
+vgdisplay
+
+lvdisplay
+
+pvcreate /dev/std1 /dev/sdc1 /dev/sdd1
+
+vgcreate bigdatachunk /dev/sdb1 /dev/sdc1
+
+pvs
+
+vgs
+
+lvcreate --name logical1 --size 6G bigdatachunk
+
+lvs
+
+mkfs.ext4 /dev/bigdatachunk/logical1
+
+mkdir logical1
+
+mount /dev/bigdatachunk/logical1 ./logical1
+
+df -h
+
+cd logical1
+
+echo "LVM test" > ./lvm.txt
+
+vi /etc/fstab to permanent mounting
+
+tune2fs -l /dev/bigdatachunk/logical1 to get some information like UUID
+
+cd ..
+
+lvextend -L +1G /dev/bigdatachunk/logical1
+
+df -h %you can see filesystem not extend
+
+resize2fs /dev/bigdatachunk/lgical1
+
+df -h
+
+--> to decreas lv size without any problem at first 
+you most unmount lv them check lv decrase stat with e2fsck
+if not give any error you can decreas size
+before unmount you most go out of derectory
+
+umount /dev/bigdatachunk/logical1
+
+e2fsck -ff /dev/bigdatachunk/logical1
+
+fsck \% to solve problem
+
+echo \$? to see status of last
+
+resize2fs /dev/bigdatachunk/logical1 4G
+
+lvreduce -L -3G /dev/bigdatachunk/logical1
+
+lvs
+
+df -h
+
+mount /dev/bigdatachunk/logical1 ./logical1
+
+df -h
+
+vgextend bigdatachunk /dev/sdd1
+
+pvs
+
+vgs
+
+df -h
+
+lvremove /dev/bigdatachunk/logical1
+
+umount /dev/bigdatachunk/logical1
+
+lvremove /dev/bigdatachunk/logical1
+
+lvs
+
+vgs
+
+vgreduce bigdatachunk /dev/sdd1
+
+vgs
+
+vgreduce bigdatachunk /sdc1
+
+vgs
+
+vgreduce bigdatachunk/sdb1
+
+vgremove bigdatachunk
+
+vgs
+
+pvs
+
+pvremove /dev/sdb1 /dev/sdc1 /dev/sdd1
+
+ls /dev/sd*
+
+\section*{RADE (Redundant Array of Independent Disks)}
+
+RADE0 (Srtiping)
+
+RADE1 (Mirroring)
+
+RADE-4: Dedicated Parity 
+
+RADE-5: Distributed Parity
+
+RADE 10 - 1 , 0
+
+RAID0 (2-32 disk)--> performance in read and write 
+but no file tlorance 
+(a data devide by 2 and half in 
+disk 0 and half in disk 1)
+
+RADE1 (2 disk)--> no performance in write 
+but have performance in read but have backup 
+(data in disk 1 same as in disk 0 (mirror))
+in RADE1 have 50 percent over head --> 120 G --> 60G in RADE1
+
+RADE 4 (3-32 disk)--> if we have n disk 1/n use for save parity 
+and wehave 100/n percent overhead and a single data save
+distribut between another disk
+
+RADE 5 like RADE 4 but in 4 a disk save all parity and
+in 5 each disk save a part of parity
+
+in 4 , 5 if we lost two or more disk cant recaver it
+
+RADE 10 --> RADE 1 + 0
+
+in terminal
+
+sha
+
+fdisk /dev/sdb --> p --> t --> fd (RADE)-->w
+
+fdisk /dev/sdc --> p --> t --> fd (RADE)-->w
+
+fdisk /dev/sdd --> p --> t --> fd (RADE)-->w
+
+cat /proc/mdstat (file of RADE)
+
+mdadm --create --verbose /dev/md0 --level=1 --rade-devices=2 /dev/sdb1 /dev/sdc1
+
+fdisk /dev/md0
+
+mkfs.ext4 /dev/md0
+
+mkdir raid1
+
+tune2fs -l /dev/md0 | grep UUID
+
+tune2fs -l /dev/md0 | grep UUID >> /etc/fstab
+
+vi /etc/fstab
+
+change lastlin to UUID=gsgsdsfg\dots    /root/raid1      ext     defaults    0    0
+
+mdadm --detail --scan
+
+mdadm --detail --scan > /etc/mdadm.conf
+
+init 6
+
+cat /proc/mdstat
+
+df -h
+
+cd raid1
+
+echo "raid 1 sample test " > ./raid1.txt
+
+mdadm --detail /dev/md0 
+
+if a disk knocked out in RADE 1
+
+mdadm --detail /dev/md0
+
+cat /proc/mdstat
+
+mdadm --manage /dev/md0 --add /dev/sdd1
+
+if a disk born in RADE 5
+first creat raid 5
+
+mdadm --creat --verbose /dev/md --leve=5 --raid-devices=3 /dev/sdb2 /dev/sdc2 /dev/sdd2
+
+fdisk /de/md1
+
+mkfd.ext4 /dev/md1
+
+mkdir raid5
+
+tune2fs -l /dev/md1 | grep UUID >> /etc/fstab
+
+in /etc/fstab 
+change last line to 
+UUID=hffhs...       /root/raid5/    ext4    defaults        0       0
+
+mdadm --detail --scan > /etc/mdadm.conf
+
+init 6
+
+cat /proc/mdstat
+
+df -h
+
+mdadm --detail /dev/md1
+
+cd raid 5
+
+echo "raid 5 sample text" > ./raid5.tex
+
+now time to lose disk
+
+mdadm --detail /dev/md1
+%add disk
+lsblk
+
+fdisk /dev/sdb
+
+mdadm --manage /dev/md1 --add /dev/sdb2
+
+mdadm --detail /dev/md1
+
+\section*{Samba}
+
+file server --> a os that share file
+common internet file system (CIFS) = samba
+
+two daemon = nmbd udp 137/138, smbd=tcp/139 or tcp/445
+
+nmblookup
+
+samba package for server
+
+smbclient package,samba-client for client first for ubuntu and secont for centos
+
+apt-get install samba smbclient
+
+make a folder in windos in c drive with name (winfileserver)
+
+then share folder with properties in share tab
+
+and set permision is security tab
+
+if we use \$ at the end of name to share 
+thats hiden share
+
+we can see all share with \texttt{\\}localhost 
+command in run 
+
+also can see hiden share with \texttt{\\}localhost\ name of share
+compmgmt.msc see all share
+
+in compmgmt.msc in tab local user and group
+
+in user folder add new user and give adminstraitor permissing
+
+in linux
+
+smbclient -L 192.168.56.20 -U richard(name of user that add)
+
+smbclient //192.168.56.20/winfileserver -U richard
+
+if you get some error like (nt status login failed)
+
+vi /etc/samba/smb.conf
+
+in line 30 add
+
+client min protocol = SMB2
+client max protocol = SMB3
+(if no error not write these line)
+
+systemctl restart smbd (debian)
+
+smbclient //192.168.56.20/winfileserver -U richard
+
+smb: > help
+
+smb: > dir
+
+smb: > get winserver.txt
+
+smb: > exit
+
+ls
+
+echo "sample teslfsjfj l" > ./linuxfile.txt
+
+smbclient //192.168.56.20/winfileserver -U richard
+
+smb: > put linuxfile.txt
+
+smb: > dir
+
+this part is finishet lets change role of linux and windoes
+
+mkdir /linuxfileserver
+
+chmod 777 /linuxfileserver
+
+echo "slshflflsl" > ./linuxfileserver/linuxsercer.txt
+
+useradd -d /home/maziyar -m -s /bin/bash maziyar
+
+passwd maziyar
+
+vi /etx/samba/smb.conf
+
+at end of file add
+
+[linuxfileserver]
+        path = /linuxfileserver
+        valid users = maziyar
+        read only = no
+        create mask = 0777
+        directory madk = 0777
+
+smbpasswd -a maziyar
+
+systemctl restart smbd
+
+in windows
+
+in run
+
+\texttt{\\}192.168.56.10
+
+testparm to see status of samba
+
+\section*{Manipulating modules(in centos)}
+
+Driver = Module > .ko
+
+lsmod (list of modules)
+
+cdrom                   42556    1    sr_mod
+
+mean sr_mod depended to cdrom
+
+cd /lib/modules
+
+uname -r
+
+cd /s10.0fs  (answer of uname command)
+
+cd net
+
+cd ipv4
+
+lsmod | grep cdrom
+
+modinfo sr_mod
+
+modinfo cdrom
+
+remove module == rmmod or modprobe -r
+
+inser module == 
+
+insmod ==> 1-full path
+
+or 
+
+modprob ==> 1-module name, 2-Dependency
+
+/lib/modules/kernel-version/modules.dep =>1) ko path, 2)Dependency
+
+rmmod cdrom
+
+modprob -r cdrom
+
+rmmod sr-mod
+
+modprobe -r cdrom
+
+lsmod
+
+/lib/modules/3.10.0-353......./modules.dep
+
+modinfo sr_mod (take address)
+
+insmod (write address)
+
+modinfo cdrom (take address)
+
+insmod (addr)
+
+insmod (addr sr-mod)
+
+rmmod sr-mod
+
+rmmod cdrom
+
+modprobe sr-mod
+
+lsmod | grep sr-mod
+
+depmod -a (update db of mdules)
+
+\section*{ kernel compilation (in centos)}
+
+linux-A.B.C.tar.xz
+
+A major release
+
+B minor release
+
+C patch level
+
+in centos to install kernel
+
+yum groupinstall "Develpment Tools"
+yum install ncurses-devel qt-devel
+
+in ubuntu
+
+apt-get install build-essential
+
+cd /usr/src
+
+tar -xvjf linux-3.6.4.tar.bz2    (gzip .gz -z, bzip2 .bz2 -j, xz .xz -J)
+
+creating a .config file
+
+make config (not recommended)
+
+make menuconfig
+
+make xconfig and gconfig
+
+make oldconfig (not recommended)
+
+cd linux-3.6.4 (extracted file)
+
+use one of make config at up
+
+old config make backup and them make new config
+
+make mrproper (delete all config file)
+
+after make config file enter
+
+make zImage/bzImage (b = big for new kernel)
+
+make modules
+
+make modules_install
+
+make install
+
+
+\section*{Nginx}
+
+in ubuntu
+
+%delete apache file
+
+apt-get remove apache2
+
+apt-get purge apache 2
+
+maby ger some warning we most del these warning
+
+cd /etc rm -rf apache2
+
+apt-get install nginx
+
+cd /etc/nginx/sites-available
+
+rm -f default
+
+cd /var/www
+
+rm -rf html/
+
+%make needed file
+
+mkdir anisa
+
+cd anisa
+
+mkdir site1 site2
+
+echo "<h1>welcomgljlsg</h1>" > ./site1/index.html
+
+echo "<h1>welcomgljlsg</h1>" > ./site2/index.html
+
+cd /etc/nginx/sites-available
+
+vi mysites.conf
+
+add lines
+
+server {
+        listen 192.168.56.10:80;
+        location / {
+                root /var/www/anisa/site1;
+        }
+}
+server {
+        listen 192.168.56.100;
+        locarion / {
+                root /var/www/anisa/site2;
+        }
+}
+
+get out
+
+cd ../sites-enabled
+
+ln -s ../sites-available/mysites.conf .
+
+nginx -t (show your mistak)
+
+systemctl restart nginx
+
+%two site with same addr and port
+
+vi mysites.conf 
+
+set both locatino as 192.168.56.10:80
+
+and theses line for both after listen line
+
+server_name www.site1.com;
+
+server_name www.site2.com;
+
+nginx -t
+
+cd /etc/bind
+
+vi name.cconf.local
+
+add new zone
+
+zone "site1.com" {
+        type master;
+        file "/etc/bind/db.site1.com";
+};
+
+zone "site1.com" {
+        type master;
+        file "/etc/bind/db/sites2.com";
+};
+
+get out
+
+cp db.mai.ir db.site1.com
+
+cp db.mai.ir db.site2.com
+
+vi db.site1.com
+
+\%s/mai.ir/site1.com/g
+
+vi db.site2.com
+
+\%s/mai.ir/site2.com/g
+
+systemctl restart bind9
+
+rndc reload
+
+systemctl restart nginx
+
+%add /image page
+
+vi mysites.conf
+
+add after locatino for on server
+
+location /image{
+        root /var/www/anisa;
+}
+
+mkdir /var/www/anisa/image
+
+echo "<h1>any</h1>" > /var/www/anisa/image/index.html
+
+nginx -t
+ 
+systemctl restart nginx
+
+%see log gile
+
+cd /var/log/nginx
+
+ls
+
+tailf error.log
+
+tailf access.log
+
+%make own log file
+
+vi /etc/nginx/site-enable/mysite.conf
+
+add after address
+
+access_log /vae/log/nginx/access_image.log;
+error_log /var/log/nginx/error_image.log;
+
+nginx -t
+
+slstemctl restart nginx
+
+tailf access_image.log
+
+%redirect site1.ir to site1.com
+
+vi /etc/nginx/site-enable/mysite.conf
+
+add 
+
+server {
+        listen 192.168.10:80:
+        server_name www.site1.ir;
+        location / {
+                return http://site1.com;
+        }
+};
+
+nginx -t
+
+systemctl restart nginx
+
+%if the site1.ir not found in centos
+
+in centos
+
+vi /etc/hosts
+
+add after 127.0.0.1
+
+192.168.56.10 www.site1.ir
+
+\subsection*{Nginx Revese Proxy}
+
+balance request to web-server by protocol
+, web acceleration
+, security
+
+1)Round Robin (cycle)
+
+2)Least Connection (web server with less req choose)
+
+3)IP Hash (same ip same web server)
+
+%adapt load balancing with same weight (Round Robin)
+
+vi /nginx/site-enable/mysites.conf
+
+delete all line then add
+
+upstream loadbalancer(any name) {
+        server 127.0.0.1:8080 weight=1;
+        server 127.0.0.1:8090 weight=1;
+}
+
+server {
+        listen 80;
+        location / {
+                proxy_pass http://loadbalancer;
+        }
+}
+
+server {
+        listen 8080;
+        location / {
+                root /var/www/anisa/site1;
+        }
+}
+
+server {
+        listen 8090;
+        location / {
+                root /var/www/anisa/site2;
+        }
+}
+
+nginx -t 
+
+systemctl restart nginx
+
+ss -ntulp | grep :80
+
+culr http://192.168.56.10
+
+%you can change weight in mysite.conf and see resault
+
+%make this reverce proxy with ip hash
+
+in file mysites.conf in upstream before server 127
+add
+
+ip_hash;
+
+nginx -t
+
+systemctl restart nginx
+
+curl
+
+\subsection*{Nginx atuntication}
+
+in /var/www/anisa
+
+mkdir secret
+
+echo "<h1></h1>" > ./secret/index.html
+
+vi /etc/nginx/sites-enable/mysites.conf
+
+delete all line
+add
+
+server {
+        listen 80;
+        location / {
+                root /var/www/anisa/site1;
+        }
+        location /secret {
+                root /var/www/anisa;
+                allow 192.168.56.20;
+                deny all;
+                auth_basic "PLZ ENTERe username pas";
+                auth_basic_user_file /etc/nginx/farhadpass;
+        }
+}
+
+nginx -t
+
+htpasswd -c /etc/nginx/farhadpass farhad(username)
+
+cat /etc/nginx/fargadpass
+
+systemctl restart nginx
+
+cd /var/www/anisa/secret
+
+dd if=/dev/zero of=./test.txt bs=500M count=1
+
+in browser http://192.168.56.10/secret/test.txt
+
+in mysites.conf
+
+after auth_basic_user_file add
+
+limit_rate 1m;
+
+nginx -t
+
+systemctl restart nginx
+
+
+\subsection*{webmin}
+
+%work graphical by linux
+
+cd /etc/apt
+
+vi sources.list
+
+cd sources.list.d
+
+vi webmin.list
+
+deb http://download.webmin.com/download/repasitory sarge contrib
+
+wgen http://www.webmin.com/jcameron.asc
+
+apt-key add jcameron-key.asc
+
+apt-get install webmin
+
+apt-get update
+
+apt-get install webmin
+
+dpkg -l | grep webmin
+
+in sources.list.d
+
+rm -f jcameron-key.asc
+
+in browser https://192.168.56.10:10000
+
+
+see and manage them
+
+
+\section*{IPV6}
+
+IPv6 Prefix (subnet mask ipv4)
+
+2001:DB8:3F::/48 --> Network Number (NN) 2 ^ 80 IP
+
+2001:DB8:3F01::/47 --> Single IP becaus
+in 81 bit at end of ip (Net id) exist 1 number is all been zero mean is NN
+
+1)-Unicast
+
+2)-Multicast
+
+3)-Anycast
+
+Unicast
+
+Global unicast address --> if first digit of first block == 3 or 2 is Global
+
+Link-local address --> FE80::/64 
+
+Unique local address --> if FC or FD in first
+
+Speecail address --> loopback ::1 (127.0.0.1 in ipv4) or unspecified addr :: (0.0.0.0 in ipv4)
+
+Multicast IPv4 address --> FF at first
+
+transation address
+
+\subsection*{IPv6 IP assignment}
+
+NN = fd00::/64 
+
+in ubuntu
+
+vi /etc/network/interfaces
+
+add
+
+iface enp0s3 inet6 static
+        address fd00::10
+        netmask 64
+
+systemctl restart networking
+
+in centos
+
+vi /etc/sysconfig/network-scripts/ifcfg-enp0s3
+
+add
+
+IPV6ADDR=fd00::20/64
+
+ping6
+
+rpm -qa | grep bind
+
+yum install -y bind bind-utils
+
+vi /etc/named.conf
+
+in line 13 in oprino
+
+listen-on-v6 ---> any;
+
+allow-query ---> any;
+
+then add new zone
+
+zone "anisa.co.local" {
+        type master;
+        file "/etc/named/db.anisa.co.local";
+};
+
+vi /etc/named/db.anisa.co.local
+
+add
+
+\$TTl 1200
+
+anisa.co.local  IN      SOA     ns.anisa.co.local       root@anisa.co.local (
+        10
+        1200
+        300
+        86400
+        3600 )
+@       IN      NS      ns.anisa.co.local.
+ns      IN      AAAA    fd00::20
+www     IN      AAAA    fd00::60 
+ftp     IN      AAAA    fd00::70 
+
+
+systemctl restart named
+
+rndc reload
+
+netstat -ntulp | grep :53
+
+dig @localhost AAAA www.anisa.co.local
+
+dig @localhost AAAA ftp.anisa.co.local
+
+NN=fd00::/64
+
+Net ID = fd00:0000:0000:0000 Host Id =0000:0000:0000:0000
+
+define reverse zone:(wiht net id) 
+
+vi /etc/named.conf
+
+zone "0.0.0.0.0.0.0.0.0.0.0.0.0.0.d.f.ip6.arpa" {
+        type master;
+        file "/etc/named/db.reversev6";
+};
+
+vi /etc/named/db.reversev6
+
+\$TTL 1200
+\$ORIGIN 0.0.0.0.0.0.0.0.0.0.0.0.0.0.d.f.ip6.arpa.
+@       IN      SOA     ns.anisa.co.local. root@anisa.co.local. (
+                10
+                1200
+                300
+                86400
+                3600 )
+@       IN      NS      ns.anisa.co.local. 
+0.2.0.0.0.0.0.0.0.0.0.0.0.0.0.0 IN PTR   ns.anisa.co.local.
+0.6.0.0.0.0.0.0.0.0.0.0.0.0.0.0 IN PTR   www.anisa.co.local.
+0.7.0.0.0.0.0.0.0.0.0.0.0.0.0.0 IN PTR   ftp.anisa.co.local.
+
+systemctl restart named
+
+rndc reload
+
+dig @loclahost -x fd::60
+
+start apache2 (httpd in centos)
+
+set listen to fd::20:80
+
+search [fd::20]
+
+\section*{FTP}
+
+Filte sharing :
+
+samba
+
+ftp --> FTP server :
+
+vsftpd, Pure-FTPd, ProFTPd,other (server side package)
+
+filezilla (client side package)
+
+in ubuntu server
+
+apt-get install vsftpd
+
+in desktop
+
+apt-get install filezilla
+
+yum instal -y epel-release (add epel to package for download)
+
+diffrent between ftp and tftp:
+
+ftp
+
+        authentication
+        21
+        TCP ==> Reliable, low speed
+
+tfpt
+
+        NO - authentication
+        69
+        UDP ==>NO - reliable, High speed
+
+diffrent bet ftps and sftp
+
+ftps 
+
+        work with key and tunel
+
+sftp
+
+        encrypt send decrypt
+
+
+vi /etc/vsftpd.conf
+
+in line 146
+
+userlist_enable=YES
+userlist_file=/etc/ftpusers.userlist
+userlist_deny=NO
+
+echo maziyar > /etc.ftpusers.userlist (maziyar name of a user)
+
+systemctl restart vsftpd
+
+systemctl status vsftpd
+
+netstat -ntulp | grep :21
+
+to upload file in server you most uncomment permition part
+
+vi /etc/vsftpd.conf
+
+in line 31 write_enable=YES
+
+systemctl restart vsftpd
+
+\section*{fail2ban}
+
+eg. 3 invalid login in 90s ==> 1200s ban
+
+apt-get install fail2ban
+
+cd /etc/fail2ban
+
+vi jail.conf
+
+in line 66 maxretry
+
+systemctl restart fail2ban
+
+\section*{OpenVPN}
+
+yum install epel-release -y
+
+yum install openvpn
+
+apt-get install openvpn
+
+in server(centos)
+
+cd ~
+
+openvpn --genkey --secret tunnel.key
+
+scp tunnel.key root@192.168.56.10:/root/
+
+vi vpnserver.conf
+
+dev tun
+ifconfig 10.10.10.20 10.10.10.30
+sectet tunnel.key
+
+in ubuntu
+
+cd ~
+
+vi vpnclient.conf
+
+remote 192.168.56.20
+dev tun
+ifconfig 10.10.10.30 10.10.10.20
+sectey tunnel.key
+
+in centos
+
+cd ~
+
+openvpn --config vpnserver.conf
+
+in ubuntu
+
+cd ~
+
+openvpn --config vpnclient.conf
+
+in centos
+
+ping 10.10.10.30
+
+ssh root@10.10.10.30
+
+you can also see wireguard (say it better)
+
+\section*{NFS(Network File System)}
+
+in ubuntu server
+
+apt-get install nfs-kernel-server
+
+mkdir /nfsserver
+
+chmod 777 /nfsserver/
+
+vi /etc/exports
+
+/nfsserver      *(rw)
+
+exportfs -r 
+
+systemctl restart nfs-kernel-server
+
+systemctl status nfs-kernel-server
+
+showmount -e localhost
+
+in centos(client)
+
+mkdir /nfsclient
+
+chmod 777 /nfsclient/
+
+showmount -e 192.168.56.10
+
+vi /etc/fstab
+
+192.168.56.10:/nfdserver        /nfsclient      nfs     default         0       0
+
+in ubuntu
+
+cd /nfsserver
+
+echo "nfs server side" > ./nfsserver.txt
+
+in centos
+
+mount /nfsclient
+
+mount
+
+df
+
+cd /nfsclient
+
+ls
+
+echo "nfs clinet side" > ./nfsclient.txt
+
+in ubuntu
+
+cd /nfsserver
+
+ls
+
+sysstemctl enable nfs-kernel-server
+
+\section*{Squid(caching proxy)}
+
+dpkg -l | grep squid
+
+apt-get install squid3
+
+systemctl restart squid3
+
+systemctl status squid3
+
+netstat -ntulp | grep 3128
+
+(check nat setting)
+
+cat /proc/sys/net/ipv4/ip_forwarding
+
+iptables -t nat -nL
+
+iptables -nL
+
+route -n
+
+cat /etc/resov.conf
+
+ping 8.8.8.8
+
+set http proxy on client with ip 192.168.56.10 with port 3128
+
+vi /etc/squid/squid.conf
+
+in line 1188 (http_access den all)
+
+http_access allow all
+
+systemctl reload squid
+
+vi /etc/squid/squid.conf
+
+in line 3408
+
+cache_dir /usf var/spool/squid 100 16 255 
+uncomment thid line
+
+cd /var/spool/squid
+
+vi /etc/squid/squid.conf
+
+in line 988 some acl definded
+
+add
+
+acl GOOGLE dstdomain .google.com
+
+thengo to line 1188
+
+before http_access allow localhost
+
+http_access deny GOOGLE
+
+systemctl reload squid3
+
+vi /etc/squid/squid.conf
+
+inlin 988
+
+acl TUESDAY time T
+
+in line 1186
+
+http_access deny TUESDAY
+
+systemctl reload squid3
+
+vi /etc/squid/squid.conf
+
+in line 988
+
+acl Nerwork1 src 192.168.56.0/24
+
+in line 1168
+
+http_access deny Network1
+
+systemctl reload squid3 
+
+\subsection*{squid athenticaiton}
+
+htpasswd -c /etc/squid/minapass mina
+
+cd /usr/lib/squid
+
+vi /etc/squid/squid.conf
+
+in line 448 before athenticatin tag add
+
+auth_patam basic program /usr/lib/squid/basic_ncsa_auth /etc/squid/minapass
+
+in line 988
+
+acl authenticate proxy_auth REQUIRED
+
+in line 1186
+
+http_access allow authenticate
+
+systemctl reload squid3
+
+\section*{monitoring}
+
+man nc (nc=net cat)
+
+nc -vz localhost 20-30
+
+nc -vz localhost 80-85
+
+nmap localhost
+
+nmap -p 25 localhost
+
+iftop 
+
+nload (switch with up and dowa arrow)
+
+iperf (client server tool)
+
+in server
+
+iperf -s
+
+in client 
+
+iperf -c 192.168.56.30
+
+\section*{Postfix, Procmail, Dovecot}
+
+in ubuntu desktop
+
+apt-get install postfix mailutils
+
+
+useradd -d /home/mina -m -s /bin/bash mina
+
+useradd -d /home/sina -m -s /bin/bash sina
+
+passwd mina
+
+passwd sina
+
+systemctl status postfix
+
+su - sina
+
+mail
+
+su - mina 
+
+mail
+
+mail sina@ubuntu 
+Cc:
+Subject: test
+hi sina
+^d
+
+su - sina
+
+mail
+?1
+?d
+?q
+
+mail root@ubuntu
+
+su - root 
+
+mail
+
+vi /etc/aliases
+
+sina:   root
+
+newaliases
+
+su - mina
+
+mail sina@ubuntu
+
+su - sina
+
+mail
+
+su - root
+
+mail
+
+cat /var/log/mail.log
+
+vi /etc/aliases
+
+del line sina:  root
+
+mail sina@ubuntu
+
+su - sina
+
+mail
+
+vi .forward
+
+mina@ubuntu
+
+su - root
+
+mail sina@ubuntu
+
+su - sina
+
+mail
+
+su -  mina
+
+mail
+
+su - sina
+
+clear .forward
+
+\subsection*{Procmail}(manage mail of user in user home)
+
+in root
+
+apt-get install procmail
+
+two type (mbox=all mail in one file, maildir=all mail in uniq file in one dir)
+
+cd /etc/postfix
+
+vi main.cf
+
+:q
+
+postconf -e "mailbox_command=procmail"
+
+vi main.cf
+
+su - sina
+
+mkdir mail
+
+su - mina
+
+mkdir mail
+
+su - root
+
+mkdir mail
+
+vi /etc/procmailrc
+
+MAILDIR=\$HOME/mail
+DEFAULT=\HOME/mail/inbox
+
+mail sina@ubuntu
+
+su - mina
+
+mail sina@ubuntu
+
+su - sina
+
+mail
+
+cd mail
+
+cat inbox
+
+su - root
+
+vi /etc/procmailrc
+
+add / at end of path line line 2
+
+mail mina@ubuntu
+
+su - sina
+
+rm -f mail/inbox
+
+mail mina@ubuntu
+
+su - mina
+
+mail
+
+cd mail
+
+cd inbox
+
+cd new
+
+cat 1551116516.ubuntu
+
+cd ../..
+
+mail -f inbox
+
+?1
+?2
+?d
+?d
+?q
+
+\subsection*{Dovecot}
+
+dpkg -l | grep dovecot
+
+apt-get install dovecot-imapd dovecot-pop3d
+
+cd /etc/ssl
+
+we most put 2 file in this path (dovecot-openssl.cnf, mkcert.sh)
+but we dont have these
+
+su - root
+
+cd /etc/dovecot
+
+cd conf.d
+
+vi 10-mail.conf
+
+in line 30 mail_location
+
+mail_location = maildir:~/mail/inbox
+
+cd /etc/ssl
+
+vi mkcert.sh
+
+vi dovecot-openssl.cnf
+
+ls certs/ | grep dovecot
+
+ls private/ | grep dovecot
+
+./mkcert.sh
+
+vi /etc/dovecot/conf.d/10-ssl.conf
+
+in line 6 
+
+ssl = required
+
+in line 12,13
+
+ssl_cert = </etc/ssl/certs/dovecot.pem
+ssl_key= </etc/ssl/private/dovecot.pem
+
+systemctl restart dovecot
+
+systemctl status dovecot
+
+netstat -ntulp | grep :100
+
+netstat -ntulp | grep :143
+
+su - mina
+
+in Thunderbird (graphical ubuntu desktop)
+
+in account setting
+
+in account action
+
+add mail account
+
+mina
+mina@ubuntu
+password
+
+su - root
+
+mail mina@ubuntu
+
+su - root
+
+mail mina@ubuntu
+
+graphicaly send a mail to sina
+
+su - sina
+
+mail -f inbox/
+
+?1
+?d
+?q
+
+\end{document}
